@@ -1,35 +1,30 @@
-import asyncio
-import google.generativeai as genai
+import asyncio, requests
 from telegram import Update
 from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes
 
-# --- إعدادات Hamill Smart Assistant ---
+# إعدادات ثابتة وقوية
 TOKEN = "8495625436:AAFGtPieNxQWtwhRGqBvdSd5cEEeInC5Smk"
 GEMINI_KEY = "AIzaSyBHQmX71kDfD4McCJ-3w10s6VOum8ncyHw"
+URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_KEY}"
 
-genai.configure(api_key=GEMINI_KEY)
-# استخدمنا هذا المسمى لأنه الأكثر استقراراً لتجنب خطأ 404
-model = genai.GenerativeModel('gemini-pro') 
-
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    waiting_msg = await update.message.reply_text("🤖 جاري التفكير...")
+async def handle_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    m = await update.message.reply_text("⚡ جاري التفكير...")
     try:
-        # محاولة التحدث مع جوجل
-        response = model.generate_content(update.message.text)
-        await waiting_msg.edit_text(response.text)
-    except Exception as e:
-        # محاولة بديلة بموديل آخر إذا فشل الأول
-        try:
-            alt_model = genai.GenerativeModel('gemini-1.5-pro')
-            res = alt_model.generate_content(update.message.text)
-            await waiting_msg.edit_text(res.text)
-        except:
-            await waiting_msg.edit_text("❌ واجهت مشكلة في الاتصال بمحرك جوجل، سأحاول مجدداً.")
+        # اتصال مباشر بسيرفرات جوجل (طريقة المحترفين)
+        payload = {"contents": [{"parts": [{"text": update.message.text}]}]}
+        res = requests.post(URL, json=payload, timeout=20)
+        
+        if res.status_code == 200:
+            text = res.json()['candidates'][0]['content']['parts'][0]['text']
+            await m.edit_text(text)
+        else:
+            await m.edit_text(f"⚠️ جوجل ردت بخطأ {res.status_code}. سأحاول مجدداً.")
+    except Exception:
+        await m.edit_text("❌ فشل الاتصال، أرسل الرسالة مرة أخرى.")
 
 async def main():
     app = ApplicationBuilder().token(TOKEN).build()
-    app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
-    
+    app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_msg))
     await app.initialize()
     await app.bot.delete_webhook(drop_pending_updates=True)
     await app.updater.start_polling()
@@ -38,4 +33,3 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
-    
