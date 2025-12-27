@@ -1,48 +1,47 @@
+import os
 import asyncio
 import google.generativeai as genai
 from telegram import Update
 from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes
-from telegram.request import HTTPXRequest
 
-# --- إعدادات Hamill Smart Assistant ---
-TOKEN = "8495625436:AAFGtPieNxQWtwhRGqBvdSd5cEEeInC5Smk" 
-GEMINI_KEY = "AIzaSyBHQmX71kDfD4McCJ-3w10s6VOum8ncyHw" 
+# --- الإعدادات (ضع التوكن والكي الخاص بك) ---
+TOKEN = "8495625436:AAFGtPieNxQWtwhRGqBvdSd5cEEeInC5Smk"
+GEMINI_KEY = "AIzaSyBHQmX71kDfD4McCJ-3w10s6VOum8ncyHw"
 
+# إعداد الذكاء الاصطناعي بنسخة مستقرة
 genai.configure(api_key=GEMINI_KEY)
-
-# تم تعديل الاسم هنا بدقة حسب تحديث جوجل الأخير لعام 2025
 model = genai.GenerativeModel('gemini-1.5-flash')
 
-async def handle_all(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    m = await update.message.reply_text("⚡ جاري التفكير...")
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # رسالة ترحيبية باسم مشروعك
+    waiting_msg = await update.message.reply_text("🤖 **Hamill Pro** | جاري المعالجة...")
+    
     try:
         if update.message.photo:
             file = await update.message.photo[-1].get_file()
-            img_data = await file.download_as_bytearray()
-            res = model.generate_content([
-                update.message.caption or "حلل هذه الصورة", 
-                {'mime_type': 'image/jpeg', 'data': bytes(img_data)}
-            ])
+            img_byte = await file.download_as_bytearray()
+            response = model.generate_content(["حلل هذه الصورة بالتفصيل", {"mime_type": "image/jpeg", "data": bytes(img_byte)}])
         else:
-            res = model.generate_content(update.message.text)
-        await m.edit_text(res.text)
+            response = model.generate_content(update.message.text)
+        
+        await waiting_msg.edit_text(response.text)
     except Exception as e:
-        await m.edit_text(f"⚠️ خطأ: {e}")
+        await waiting_msg.edit_text(f"❌ عذراً، حاول مجدداً خلال لحظات.")
 
 async def main():
-    t_request = HTTPXRequest(connect_timeout=30, read_timeout=30)
-    app = ApplicationBuilder().token(TOKEN).request(t_request).build()
-    app.add_handler(MessageHandler(filters.TEXT | filters.PHOTO, handle_all))
+    # بناء البوت بنظام يتفادى التعارض (Conflict)
+    app = ApplicationBuilder().token(TOKEN).build()
+    app.add_handler(MessageHandler(filters.TEXT | filters.PHOTO, handle_message))
     
-    # هذه الخطوة ستحل مشكلة Conflict نهائياً
+    print("✅ البوت الربحي جاهز للعمل مجاناً...")
     await app.initialize()
     await app.bot.delete_webhook(drop_pending_updates=True)
-    
-    print("🚀 Hamill Smart Assistant is Starting...")
-    await app.updater.start_polling(drop_pending_updates=True)
+    await app.updater.start_polling()
     await app.start()
+    
+    # إبقاء السيرفر مستيقظاً
     while True: await asyncio.sleep(3600)
 
 if __name__ == "__main__":
     asyncio.run(main())
-    
+        
