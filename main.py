@@ -2,11 +2,13 @@ import asyncio
 import google.generativeai as genai
 from telegram import Update
 from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes
+from telegram.request import HTTPXRequest
 
-# --- الإعدادات النهائية بالتوكن الجديد ---
+# --- الإعدادات النهائية ---
 TOKEN = "8495625436:AAFGtPieNxQWtwhRGqBvdSd5cEEeInC5Smk" 
 GEMINI_KEY = "AIzaSyDmk_gLK-FwkhX1VMnYfRajmh7EfeH7UZ0" 
 
+# إعداد نموذج جمناي
 genai.configure(api_key=GEMINI_KEY)
 model = genai.GenerativeModel('gemini-1.5-flash')
 
@@ -25,18 +27,26 @@ async def handle_all(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await m.edit_text(res.text)
     except Exception as e:
         print(f"Error: {e}")
-        await m.edit_text("⚠️ البوت يعمل ولكن هناك خطأ في المعالجة.")
+        await m.edit_text("⚠️ عذراً، حدث خطأ أثناء المعالجة.")
 
 async def main():
-    app = ApplicationBuilder().token(TOKEN).build()
+    # حل مشكلة الـ Timeout بزيادة وقت الانتظار إلى 30 ثانية
+    t_request = HTTPXRequest(connect_timeout=30, read_timeout=30)
+    
+    # بناء التطبيق مع إعدادات الاتصال الجديدة
+    app = ApplicationBuilder().token(TOKEN).request(t_request).build()
+    
     app.add_handler(MessageHandler(filters.TEXT | filters.PHOTO, handle_all))
-    print("🚀 البوت متصل بالتوكن الجديد!")
+    
+    print("🚀 محاولة الاتصال بتلغرام...")
+    
     await app.initialize()
     await app.updater.start_polling(drop_pending_updates=True)
     await app.start()
+    
     while True: 
         await asyncio.sleep(60)
 
 if __name__ == "__main__":
     asyncio.run(main())
-            
+    
