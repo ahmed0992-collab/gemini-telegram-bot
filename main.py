@@ -3,11 +3,10 @@ import google.generativeai as genai
 from telegram import Update
 from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes
 
-# --- الإعدادات النهائية (التوكن الجديد) ---
-TOKEN = "8495625436:AAGiPMK-m5yp7pforkw2LGtCkX1z209jcsQ" 
+# --- الإعدادات النهائية بالتوكن الجديد ---
+TOKEN = "8495625436:AAFGtPieNxQWtwhRGqBvdSd5cEEeInC5Smk" 
 GEMINI_KEY = "AIzaSyDmk_gLK-FwkhX1VMnYfRajmh7EfeH7UZ0" 
 
-# إعداد نموذج جمناي
 genai.configure(api_key=GEMINI_KEY)
 model = genai.GenerativeModel('gemini-1.5-flash')
 
@@ -23,25 +22,21 @@ async def handle_all(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ])
         else:
             res = model.generate_content(update.message.text)
-        
         await m.edit_text(res.text)
     except Exception as e:
         print(f"Error: {e}")
-        await m.edit_text("⚠️ حدث خطأ، تأكد من صلاحية المفاتيح.")
+        await m.edit_text("⚠️ البوت يعمل ولكن هناك خطأ في المعالجة.")
 
 async def main():
     app = ApplicationBuilder().token(TOKEN).build()
     app.add_handler(MessageHandler(filters.TEXT | filters.PHOTO, handle_all))
-    
-    print("🚀 البوت متصل الآن بنجاح!")
-    
+    print("🚀 البوت متصل بالتوكن الجديد!")
     await app.initialize()
     await app.updater.start_polling(drop_pending_updates=True)
     await app.start()
-    
     while True: 
         await asyncio.sleep(60)
 
 if __name__ == "__main__":
     asyncio.run(main())
-    
+            
