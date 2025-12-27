@@ -4,16 +4,17 @@ from telegram import Update
 from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes
 from telegram.request import HTTPXRequest
 
-# --- الإعدادات النهائية ---
+# --- إعدادات بوتك الخاص (Hamill) ---
 TOKEN = "8495625436:AAFGtPieNxQWtwhRGqBvdSd5cEEeInC5Smk" 
 GEMINI_KEY = "AIzaSyBHQmX71kDfD4McCJ-3w10s6VOum8ncyHw" 
 
 genai.configure(api_key=GEMINI_KEY)
-# تم التعديل ليكون 'models/gemini-1.5-flash' كما طلبت السجلات
-model = genai.GenerativeModel('models/gemini-1.5-flash')
+
+# تم تغيير الاسم هنا لحل خطأ 404 الظاهر في صورتك
+model = genai.GenerativeModel('gemini-1.5-flash-latest')
 
 async def handle_all(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    m = await update.message.reply_text("⚡ جارٍ التحليل...")
+    m = await update.message.reply_text("⚡ جاري التفكير...")
     try:
         if update.message.photo:
             file = await update.message.photo[-1].get_file()
@@ -26,20 +27,18 @@ async def handle_all(update: Update, context: ContextTypes.DEFAULT_TYPE):
             res = model.generate_content(update.message.text)
         await m.edit_text(res.text)
     except Exception as e:
-        await m.edit_text(f"⚠️ حدث خطأ: {e}")
+        await m.edit_text(f"⚠️ خطأ: {e}")
 
 async def main():
     t_request = HTTPXRequest(connect_timeout=40, read_timeout=40)
     app = ApplicationBuilder().token(TOKEN).request(t_request).build()
     app.add_handler(MessageHandler(filters.TEXT | filters.PHOTO, handle_all))
     
-    print("🚀 البدء النهائي...")
+    # تنظيف أي اتصالات قديمة لحل مشكلة Conflict
     await app.initialize()
-    # تنظيف التحديثات لقتل أي نسخة قديمة (حل Conflict)
     await app.updater.start_polling(drop_pending_updates=True)
     await app.start()
     while True: await asyncio.sleep(60)
 
 if __name__ == "__main__":
     asyncio.run(main())
-            
